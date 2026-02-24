@@ -12,7 +12,8 @@
     "concurrency": "Eşzamanlılık (1–50)",
     "prompt": "Doğrulama istemi",
     "start": "Başlat",
-    "stop": "Durdur"
+    "stop": "Durdur",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Anahtarlar",

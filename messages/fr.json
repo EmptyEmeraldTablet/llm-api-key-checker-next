@@ -12,7 +12,8 @@
     "concurrency": "Simultanéité (1-50)",
     "prompt": "Prompt de validation",
     "start": "Démarrer",
-    "stop": "Arrêter"
+    "stop": "Arrêter",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Clés",

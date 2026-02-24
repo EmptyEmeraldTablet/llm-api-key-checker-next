@@ -12,7 +12,8 @@
     "concurrency": "Kekonkurenan (1–50)",
     "prompt": "Prompt pengesahan",
     "start": "Mula",
-    "stop": "Henti"
+    "stop": "Henti",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Kunci",

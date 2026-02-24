@@ -7,6 +7,7 @@ export type CheckRequest = {
   keys: string[];
   concurrency: number;
   validationPrompt?: string;
+  endpointSuffix?: string;
   lowThreshold?: number; // for status classification
   enableStream?: boolean;
 };
@@ -31,8 +32,22 @@ function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.replace(/\/+$/, '');
 }
 
-function shouldTryV1Fallback(baseUrl: string, res: Response) {
+function normalizeEndpointSuffix(suffix?: string) {
+  const trimmed = suffix?.trim() ?? '';
+  if (!trimmed) return '';
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}
+
+function resolveEndpointPath(kind: 'openai' | 'anthropic' | 'gemini', endpointSuffix?: string) {
+  const normalized = normalizeEndpointSuffix(endpointSuffix);
+  if (normalized) return normalized;
+  return kind === 'anthropic' ? '/messages' : '/chat/completions';
+}
+
+function shouldTryV1Fallback(baseUrl: string, endpointPath: string, res: Response) {
   if (normalizeBaseUrl(baseUrl).endsWith('/v1')) return false;
+  const path = endpointPath.toLowerCase();
+  if (path.includes('/v1')) return false;
   return res.status === 404 || res.status === 405;
 }
 
@@ -103,6 +118,15 @@ function isOpenAIChatResponse(raw: unknown) {
   return Array.isArray(obj.choices) && obj.choices.length > 0;
 }
 
+function isOpenAIResponsesResponse(raw: unknown) {
+  if (!raw || typeof raw !== 'object') return false;
+  const obj: any = raw;
+  if (obj.object === 'response') return true;
+  if (typeof obj.output_text === 'string') return true;
+  if (Array.isArray(obj.output) && obj.output.length > 0) return true;
+  return false;
+}
+
 function isAnthropicMessageResponse(raw: unknown) {
   if (!raw || typeof raw !== 'object') return false;
   const obj: any = raw;
@@ -110,33 +134,74 @@ function isAnthropicMessageResponse(raw: unknown) {
   return Array.isArray(obj.content) && obj.content.length > 0;
 }
 
-async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; key: string; prompt?: string }) {
+type OpenAIEndpointKind = 'chat' | 'responses' | 'completions' | 'other';
+
+function getOpenAIEndpointKind(endpointPath: string): OpenAIEndpointKind {
+  const p = endpointPath.toLowerCase();
+  if (p.endsWith('/responses')) return 'responses';
+  if (p.endsWith('/chat/completions')) return 'chat';
+  if (p.endsWith('/completions')) return 'completions';
+  return 'other';
+}
+
+function buildOpenAIRequestBody(kind: OpenAIEndpointKind, req: { model: string; prompt?: string }) {
+  const prompt = req.prompt || 'Hi';
+  if (kind === 'responses') {
+    return {
+      model: req.model,
+      input: prompt,
+      max_output_tokens: 16,
+      stream: false,
+    };
+  }
+  if (kind === 'completions') {
+    return {
+      model: req.model,
+      prompt,
+      max_tokens: 16,
+      stream: false,
+    };
+  }
+  return {
+    model: req.model,
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 1,
+    stream: false,
+  };
+}
+
+function isOpenAIResponseOk(raw: unknown, kind: OpenAIEndpointKind) {
+  if (isErrorPayload(raw)) return false;
+  if (kind === 'responses') return isOpenAIResponsesResponse(raw) || isOpenAIChatResponse(raw);
+  if (kind === 'chat' || kind === 'completions') return isOpenAIChatResponse(raw);
+  return raw != null;
+}
+
+async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; key: string; prompt?: string; endpointSuffix?: string }) {
+  const endpointPath = resolveEndpointPath('openai', req.endpointSuffix);
+  const endpointKind = getOpenAIEndpointKind(endpointPath);
+
   async function requestOnce(baseUrl: string) {
-    const url = `${normalizeBaseUrl(baseUrl)}/chat/completions`;
+    const url = `${normalizeBaseUrl(baseUrl)}${endpointPath}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${req.key}`,
       },
-      body: JSON.stringify({
-        model: req.model,
-        messages: [{ role: 'user', content: req.prompt || 'Hi' }],
-        max_tokens: 1,
-        stream: false,
-      }),
+      body: JSON.stringify(buildOpenAIRequestBody(endpointKind, req)),
     });
     const raw = await readBody(res);
     return { res, raw };
   }
 
   const primary = await requestOnce(req.baseUrl);
-  const primaryOk = primary.res.ok && isOpenAIChatResponse(primary.raw) && !isErrorPayload(primary.raw);
+  const primaryOk = primary.res.ok && isOpenAIResponseOk(primary.raw, endpointKind);
   if (primaryOk) return { ok: true as const, raw: primary.raw };
 
-  if (shouldTryV1Fallback(req.baseUrl, primary.res)) {
+  if (shouldTryV1Fallback(req.baseUrl, endpointPath, primary.res)) {
     const fallback = await requestOnce(`${normalizeBaseUrl(req.baseUrl)}/v1`);
-    const fallbackOk = fallback.res.ok && isOpenAIChatResponse(fallback.raw) && !isErrorPayload(fallback.raw);
+    const fallbackOk = fallback.res.ok && isOpenAIResponseOk(fallback.raw, endpointKind);
     if (fallbackOk) return { ok: true as const, raw: fallback.raw };
     return { ok: false as const, status: classifyError(fallback.res, fallback.raw), raw: fallback.raw };
   }
@@ -144,9 +209,11 @@ async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; k
   return { ok: false as const, status: classifyError(primary.res, primary.raw), raw: primary.raw };
 }
 
-async function checkAnthropicKey(req: { baseUrl: string; model: string; key: string; prompt?: string }) {
+async function checkAnthropicKey(req: { baseUrl: string; model: string; key: string; prompt?: string; endpointSuffix?: string }) {
+  const endpointPath = resolveEndpointPath('anthropic', req.endpointSuffix);
+
   async function requestOnce(baseUrl: string) {
-    const url = `${normalizeBaseUrl(baseUrl)}/messages`;
+    const url = `${normalizeBaseUrl(baseUrl)}${endpointPath}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -168,7 +235,7 @@ async function checkAnthropicKey(req: { baseUrl: string; model: string; key: str
   const primaryOk = primary.res.ok && isAnthropicMessageResponse(primary.raw) && !isErrorPayload(primary.raw);
   if (primaryOk) return { ok: true as const, raw: primary.raw };
 
-  if (shouldTryV1Fallback(req.baseUrl, primary.res)) {
+  if (shouldTryV1Fallback(req.baseUrl, endpointPath, primary.res)) {
     const fallback = await requestOnce(`${normalizeBaseUrl(req.baseUrl)}/v1`);
     const fallbackOk = fallback.res.ok && isAnthropicMessageResponse(fallback.raw) && !isErrorPayload(fallback.raw);
     if (fallbackOk) return { ok: true as const, raw: fallback.raw };
@@ -222,6 +289,7 @@ export async function checkOne(input: {
   model: string;
   key: string;
   prompt?: string;
+  endpointSuffix?: string;
   lowThreshold?: number;
 }): Promise<CheckResult> {
   const meta = getProviderMeta(input.provider);
@@ -231,9 +299,21 @@ export async function checkOne(input: {
     | { ok: false; status: CheckResult['status']; raw: unknown };
 
   if (meta.kind === 'anthropic') {
-    result = await checkAnthropicKey({ baseUrl: input.baseUrl, model: input.model, key: input.key, prompt: input.prompt });
+    result = await checkAnthropicKey({
+      baseUrl: input.baseUrl,
+      model: input.model,
+      key: input.key,
+      prompt: input.prompt,
+      endpointSuffix: input.endpointSuffix,
+    });
   } else {
-    result = await checkOpenAICompatibleKey({ baseUrl: input.baseUrl, model: input.model, key: input.key, prompt: input.prompt });
+    result = await checkOpenAICompatibleKey({
+      baseUrl: input.baseUrl,
+      model: input.model,
+      key: input.key,
+      prompt: input.prompt,
+      endpointSuffix: input.endpointSuffix,
+    });
   }
 
   if (result.ok) {

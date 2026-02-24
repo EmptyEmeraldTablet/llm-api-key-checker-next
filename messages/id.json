@@ -12,7 +12,8 @@
     "concurrency": "Konkruensi (1–50)",
     "prompt": "Prompt validasi",
     "start": "Mulai",
-    "stop": "Berhenti"
+    "stop": "Berhenti",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Kunci",

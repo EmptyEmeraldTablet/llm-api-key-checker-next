@@ -12,7 +12,8 @@
     "concurrency": "동시 실행 수 (1-50)",
     "prompt": "검증 프롬프트",
     "start": "시작",
-    "stop": "중지"
+    "stop": "중지",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "키",

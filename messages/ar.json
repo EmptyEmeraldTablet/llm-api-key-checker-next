@@ -12,7 +12,8 @@
     "concurrency": "التوازي (1–50)",
     "prompt": "نص التحقق",
     "start": "بدء",
-    "stop": "إيقاف"
+    "stop": "إيقاف",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "المفاتيح",

@@ -12,7 +12,8 @@
     "concurrency": "Song song (1–50)",
     "prompt": "Prompt kiểm tra",
     "start": "Bắt đầu",
-    "stop": "Dừng"
+    "stop": "Dừng",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Key",

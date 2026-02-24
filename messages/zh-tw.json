@@ -12,7 +12,8 @@
     "concurrency": "並發（1-50）",
     "prompt": "驗證提示詞",
     "start": "開始",
-    "stop": "停止"
+    "stop": "停止",
+    "endpointSuffix": "端點後綴（可選）"
   },
   "keys": {
     "title": "金鑰",

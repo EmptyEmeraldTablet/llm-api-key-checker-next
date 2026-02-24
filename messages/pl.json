@@ -12,7 +12,8 @@
     "concurrency": "Współbieżność (1–50)",
     "prompt": "Prompt walidacyjny",
     "start": "Start",
-    "stop": "Stop"
+    "stop": "Stop",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Klucze",

@@ -12,7 +12,8 @@
     "concurrency": "Gelijktijdigheid (1–50)",
     "prompt": "Validatieprompt",
     "start": "Start",
-    "stop": "Stop"
+    "stop": "Stop",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Sleutels",

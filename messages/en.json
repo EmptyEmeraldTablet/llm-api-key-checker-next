@@ -12,7 +12,8 @@
     "concurrency": "Concurrency (1-50)",
     "prompt": "Validation prompt",
     "start": "Start",
-    "stop": "Stop"
+    "stop": "Stop",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Keys",

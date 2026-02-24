@@ -12,7 +12,8 @@
     "concurrency": "Параллельность (1–50)",
     "prompt": "Промпт для проверки",
     "start": "Старт",
-    "stop": "Стоп"
+    "stop": "Стоп",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Ключи",

@@ -12,7 +12,8 @@
     "concurrency": "并发（1-50）",
     "prompt": "验证提示词",
     "start": "开始",
-    "stop": "停止"
+    "stop": "停止",
+    "endpointSuffix": "接口后缀（可选）"
   },
   "keys": {
     "title": "密钥",

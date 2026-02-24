@@ -12,7 +12,8 @@
     "concurrency": "समांतरता (1–50)",
     "prompt": "वैलिडेशन प्रॉम्प्ट",
     "start": "शुरू करें",
-    "stop": "रोकें"
+    "stop": "रोकें",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "कुंजियाँ",

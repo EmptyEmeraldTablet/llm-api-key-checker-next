@@ -12,7 +12,8 @@
     "concurrency": "同時実行数 (1-50)",
     "prompt": "検証プロンプト",
     "start": "開始",
-    "stop": "停止"
+    "stop": "停止",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "キー",

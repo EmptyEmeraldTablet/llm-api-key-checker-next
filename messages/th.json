@@ -12,7 +12,8 @@
     "concurrency": "ความขนาน (1–50)",
     "prompt": "พรอมป์สำหรับตรวจสอบ",
     "start": "เริ่ม",
-    "stop": "หยุด"
+    "stop": "หยุด",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "คีย์",

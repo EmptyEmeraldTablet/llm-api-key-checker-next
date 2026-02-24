@@ -12,7 +12,8 @@
     "concurrency": "Concorrência (1–50)",
     "prompt": "Prompt de validação",
     "start": "Iniciar",
-    "stop": "Parar"
+    "stop": "Parar",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Chaves",

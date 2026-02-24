@@ -12,7 +12,8 @@
     "concurrency": "Parallelität (1–50)",
     "prompt": "Validierungs-Prompt",
     "start": "Start",
-    "stop": "Stopp"
+    "stop": "Stopp",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Keys",

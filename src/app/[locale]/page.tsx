@@ -181,6 +181,7 @@ export default function Home() {
   const [prompt, setPrompt] = useState(
     'Please briefly introduce yourself, including your model name, version, context window size, key capabilities, and any other basic information. Keep your response concise.'
   );
+  const [endpointSuffix, setEndpointSuffix] = useState('');
   const [lowThreshold, setLowThreshold] = useState(1);
   const [models, setModels] = useState<string[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
@@ -202,6 +203,7 @@ export default function Home() {
     setRows([]);
     setDone(0);
     setTotal(0);
+    setEndpointSuffix('');
     setModelFetchInfo(null);
   }
 
@@ -228,6 +230,7 @@ export default function Home() {
           keys,
           concurrency,
           validationPrompt: prompt,
+          endpointSuffix,
           lowThreshold
         }),
         signal: ac.signal
@@ -496,6 +499,23 @@ export default function Home() {
                     </label>
                   </div>
                 </div>
+
+                <label className="block">
+                  <div className="mb-2 text-xs font-medium text-[var(--muted)] uppercase tracking-wide">{t('provider.endpointSuffix')}</div>
+                  <input
+                    list="endpoint-suffixes"
+                    className="glass-input w-full rounded-xl px-4 py-3"
+                    value={endpointSuffix}
+                    onChange={(e) => setEndpointSuffix(e.target.value)}
+                    placeholder="/responses"
+                  />
+                  <datalist id="endpoint-suffixes">
+                    <option value="" />
+                    <option value="/chat/completions" />
+                    <option value="/responses" />
+                    <option value="/completions" />
+                  </datalist>
+                </label>
 
                 <label className="block">
                   <div className="mb-2 text-xs font-medium text-[var(--muted)] uppercase tracking-wide">{t('provider.prompt')}</div>

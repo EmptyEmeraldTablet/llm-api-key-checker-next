@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
             model: body.model,
             key: k,
             prompt: body.validationPrompt,
+            endpointSuffix: body.endpointSuffix,
             lowThreshold: typeof body.lowThreshold === 'number' ? body.lowThreshold : undefined
           });
         },

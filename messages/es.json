@@ -12,7 +12,8 @@
     "concurrency": "Concurrencia (1-50)",
     "prompt": "Prompt de validación",
     "start": "Iniciar",
-    "stop": "Detener"
+    "stop": "Detener",
+    "endpointSuffix": "Endpoint suffix (optional)"
   },
   "keys": {
     "title": "Claves",
