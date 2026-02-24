@@ -39,11 +39,6 @@
     "colMessage": "Thông báo",
     "lowThreshold": "Ngưỡng số dư thấp"
   },
-  "footer": {
-    "sponsoredBy": "Tài trợ bởi",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "kiểm tra API key LLM, xác thực API key, kiểm tra key OpenAI, xác thực Claude API, kiểm tra hàng loạt, kiểm tra DeepSeek API, xác thực Gemini API, thử API key"
   },

@@ -39,11 +39,6 @@
     "colMessage": "Mesaj",
     "lowThreshold": "Düşük bakiye eşiği"
   },
-  "footer": {
-    "sponsoredBy": "Sponsor",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "LLM API anahtar denetleyici, API key doğrulayıcı, OpenAI key kontrol, Claude API doğrulayıcı, toplu API doğrulama, DeepSeek API kontrol, Gemini API doğrulayıcı, API key tester"
   },

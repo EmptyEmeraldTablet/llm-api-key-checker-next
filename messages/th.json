@@ -39,11 +39,6 @@
     "colMessage": "ข้อความ",
     "lowThreshold": "เกณฑ์ยอดคงเหลือต่ำ"
   },
-  "footer": {
-    "sponsoredBy": "สนับสนุนโดย",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "ตรวจสอบ LLM API key, ตัวตรวจสอบ API key, ตรวจสอบคีย์ OpenAI, ตรวจสอบ Claude API, ตรวจสอบแบบเป็นชุด, ตรวจสอบ DeepSeek API, ตรวจสอบ Gemini API, ทดสอบ API key"
   },

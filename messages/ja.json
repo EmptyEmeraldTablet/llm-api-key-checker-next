@@ -39,11 +39,6 @@
     "colMessage": "メッセージ",
     "lowThreshold": "低残高閾値"
   },
-  "footer": {
-    "sponsoredBy": "スポンサー：",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "LLM APIキーチェッカー, APIキー検証, OpenAIキーチェッカー, Claude API検証, 一括API検証, DeepSeek APIチェッカー, Gemini API検証, APIキーテスター"
   },

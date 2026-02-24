@@ -39,11 +39,6 @@
     "colMessage": "Mensaje",
     "lowThreshold": "Umbral bajo"
   },
-  "footer": {
-    "sponsoredBy": "Patrocinado por",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "verificador de claves API LLM, validador de claves API, verificador de claves OpenAI, validador API Claude, validación de API en lote, verificador API DeepSeek, validador API Gemini, probador de claves API"
   },

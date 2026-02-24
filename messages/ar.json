@@ -39,11 +39,6 @@
     "colMessage": "الرسالة",
     "lowThreshold": "حد الرصيد المنخفض"
   },
-  "footer": {
-    "sponsoredBy": "برعاية",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "فاحص مفاتيح LLM API, التحقق من API key, فحص مفتاح OpenAI, التحقق من Claude API, فحص دفعي, فحص DeepSeek API, التحقق من Gemini API, اختبار API key"
   },

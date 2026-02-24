@@ -39,11 +39,6 @@
     "colMessage": "資訊",
     "lowThreshold": "低額閾值"
   },
-  "footer": {
-    "sponsoredBy": "由",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": "贊助"
-  },
   "seo": {
     "keywords": "LLM API金鑰檢測, API Key驗證工具, OpenAI金鑰檢測, Claude API驗證, 批量API驗證, DeepSeek API檢測, Gemini API驗證, API金鑰測試"
   },

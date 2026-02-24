@@ -39,11 +39,6 @@
     "colMessage": "Сообщение",
     "lowThreshold": "Порог низкого баланса"
   },
-  "footer": {
-    "sponsoredBy": "При поддержке",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "проверка LLM API ключей, валидатор API ключей, проверка ключа OpenAI, валидатор Claude API, пакетная проверка API, проверка DeepSeek API, валидатор Gemini API, тестер API ключей"
   },

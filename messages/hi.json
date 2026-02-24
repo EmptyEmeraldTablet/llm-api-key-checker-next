@@ -39,11 +39,6 @@
     "colMessage": "संदेश",
     "lowThreshold": "कम बैलेंस सीमा"
   },
-  "footer": {
-    "sponsoredBy": "प्रायोजित",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "LLM API कुंजी चेकर, API key validator, OpenAI key checker, Claude API validator, batch API validation, DeepSeek API checker, Gemini API validator, API key tester"
   },

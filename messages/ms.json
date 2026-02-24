@@ -39,11 +39,6 @@
     "colMessage": "Mesej",
     "lowThreshold": "Ambang baki rendah"
   },
-  "footer": {
-    "sponsoredBy": "Ditaja oleh",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "penyemak kunci API LLM, pengesah API key, semak kunci OpenAI, pengesah Claude API, pengesahan pukal, semak DeepSeek API, pengesah Gemini API, penguji API key"
   },

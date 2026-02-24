@@ -39,11 +39,6 @@
     "colMessage": "Pesan",
     "lowThreshold": "Ambang saldo rendah"
   },
-  "footer": {
-    "sponsoredBy": "Disponsori oleh",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "pemeriksa kunci API LLM, validator API key, cek kunci OpenAI, validator Claude API, validasi batch API, cek DeepSeek API, validator Gemini API, tester API key"
   },

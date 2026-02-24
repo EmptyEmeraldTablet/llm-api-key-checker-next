@@ -6,7 +6,7 @@
 
 **Batch validate API keys for multiple LLM providers with real-time streaming progress**
 
-[Live Demo](https://check.chat-tempmail.com) | [中文文档](./README_CN.md)
+[Live Demo](https://llm-api-key-checker-next.vercel.app/zh-cn) | [中文文档](./README_CN.md)
 
 </div>
 
@@ -48,7 +48,7 @@
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Selenium39/llm-api-key-checker-next.git
+git clone https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next.git
 cd llm-api-key-checker-next
 ```
 
@@ -169,10 +169,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is open source and available under the [MIT License](LICENSE).
 
-## 💖 Sponsored by
-
-This project is proudly sponsored by [ChatTempMail](https://chat-tempmail.com) - a free temporary email service with AI integration.
-
 ## 🙏 Acknowledgments
 
 - Thanks to all contributors
@@ -181,9 +177,9 @@ This project is proudly sponsored by [ChatTempMail](https://chat-tempmail.com) -
 
 ## 📧 Contact
 
-- GitHub: [@Selenium39](https://github.com/Selenium39)
-- Project Link: [https://github.com/Selenium39/llm-api-key-checker-next](https://github.com/Selenium39/llm-api-key-checker-next)
-- Live Demo: [https://check.chat-tempmail.com](https://check.chat-tempmail.com)
+- GitHub: [@EmptyEmeraldTablet](https://github.com/EmptyEmeraldTablet)
+- Project Link: [https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next](https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next)
+- Live Demo: [https://llm-api-key-checker-next.vercel.app/zh-cn](https://llm-api-key-checker-next.vercel.app/zh-cn)
 
 ---
 

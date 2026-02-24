@@ -39,11 +39,6 @@
     "colMessage": "Message",
     "lowThreshold": "Low threshold"
   },
-  "footer": {
-    "sponsoredBy": "Sponsored by",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "LLM API key checker, API key validator, OpenAI key checker, Claude API validator, batch API validation, DeepSeek API checker, Gemini API validator, API key tester"
   },

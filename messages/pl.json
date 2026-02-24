@@ -39,11 +39,6 @@
     "colMessage": "Wiadomość",
     "lowThreshold": "Próg niskiego salda"
   },
-  "footer": {
-    "sponsoredBy": "Sponsorowane przez",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "sprawdzanie kluczy API LLM, walidator API key, sprawdzanie klucza OpenAI, walidator Claude API, walidacja wsadowa, sprawdzanie DeepSeek API, walidator Gemini API, tester API key"
   },

@@ -39,11 +39,6 @@
     "colMessage": "메시지",
     "lowThreshold": "낮은 잔액 기준"
   },
-  "footer": {
-    "sponsoredBy": "후원:",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "LLM API 키 검사기, API 키 검증, OpenAI 키 검사기, Claude API 검증, 일괄 API 검증, DeepSeek API 검사기, Gemini API 검증, API 키 테스터"
   },

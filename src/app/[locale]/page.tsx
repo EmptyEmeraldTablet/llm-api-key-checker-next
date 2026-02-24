@@ -360,7 +360,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href="https://github.com/Selenium39/llm-api-key-checker-next"
+              href="https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next"
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full bg-[var(--card-bg)] p-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--glass-border)] transition-colors"
@@ -721,22 +721,9 @@ export default function Home() {
 
         {/* Footer Section */}
         <footer className="mt-12 text-center">
-           <p className="text-sm text-[var(--muted-foreground)] flex items-center justify-center gap-1">
-              <span className="text-red-500 animate-pulse">❤</span>{' '}
-              {t('footer.sponsoredBy')}{' '}
-              <a
-                href="https://chat-tempmail.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-indigo-500 hover:text-indigo-400 font-medium hover:underline underline-offset-2 transition-colors"
-              >
-                {t('footer.sponsor')}
-              </a>
-              {t('footer.sponsoredSuffix') && ` ${t('footer.sponsoredSuffix')}`}
-            </p>
-             <div className="mt-4 text-xs text-[var(--muted)]">
-                &copy; {new Date().getFullYear()} LLM API Key Checker. Open Source on GitHub.
-             </div>
+          <div className="text-xs text-[var(--muted)]">
+            &copy; {new Date().getFullYear()} LLM API Key Checker. Open Source on GitHub.
+          </div>
         </footer>
 
       </div>

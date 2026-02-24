@@ -39,11 +39,6 @@
     "colMessage": "Bericht",
     "lowThreshold": "Drempel laag saldo"
   },
-  "footer": {
-    "sponsoredBy": "Gesponsord door",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "LLM API-sleutelchecker, API key validator, OpenAI sleutelchecker, Claude API validator, batch validatie, DeepSeek API checker, Gemini API validator, API key tester"
   },

@@ -39,11 +39,6 @@
     "colMessage": "Mensagem",
     "lowThreshold": "Limite de saldo baixo"
   },
-  "footer": {
-    "sponsoredBy": "Patrocinado por",
-    "sponsor": "ChatTempMail",
-    "sponsoredSuffix": ""
-  },
   "seo": {
     "keywords": "verificador de chave API LLM, validador de chave API, checar chave OpenAI, validador Claude API, validação em lote, checar DeepSeek API, validador Gemini API, tester de chave API"
   },
