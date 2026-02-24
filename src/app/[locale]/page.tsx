@@ -11,6 +11,18 @@ const siteUrl = 'https://check.chat-tempmail.com';
 
 type Row = CheckResult;
 
+type ModelFetchInfo = { kind: 'success' | 'error'; text: string };
+
+function formatRaw(raw: unknown) {
+  if (raw == null) return '';
+  if (typeof raw === 'string') return raw;
+  try {
+    return JSON.stringify(raw);
+  } catch {
+    return String(raw);
+  }
+}
+
 function ThemeSwitcher() {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
@@ -166,10 +178,13 @@ export default function Home() {
   const [baseUrl, setBaseUrl] = useState(meta.defaultBaseUrl);
   const [model, setModel] = useState(meta.defaultModel);
   const [concurrency, setConcurrency] = useState(10);
-  const [prompt, setPrompt] = useState('Hi');
+  const [prompt, setPrompt] = useState(
+    'Please briefly introduce yourself, including your model name, version, context window size, key capabilities, and any other basic information. Keep your response concise.'
+  );
   const [lowThreshold, setLowThreshold] = useState(1);
   const [models, setModels] = useState<string[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
+  const [modelFetchInfo, setModelFetchInfo] = useState<ModelFetchInfo | null>(null);
 
   const [keyText, setKeyText] = useState('');
   const [running, setRunning] = useState(false);
@@ -187,6 +202,7 @@ export default function Home() {
     setRows([]);
     setDone(0);
     setTotal(0);
+    setModelFetchInfo(null);
   }
 
   async function start() {
@@ -263,6 +279,8 @@ export default function Home() {
     const keys = parseKeys(keyText);
     if (keys.length === 0) return;
     setFetchingModels(true);
+    setModelFetchInfo(null);
+    const baseUrlInput = baseUrl;
     try {
       const res = await fetch('/api/models', {
         method: 'POST',
@@ -275,8 +293,19 @@ export default function Home() {
         if (data.models.length && !data.models.includes(model)) {
           setModel(data.models[0]);
         }
+        const resolvedBaseUrl = data.baseUrl || baseUrlInput;
+        const baseUrlChanged = data.baseUrl && data.baseUrl !== baseUrlInput;
+        if (baseUrlChanged) {
+          setBaseUrl(data.baseUrl);
+        }
+        const resolvedText = baseUrlChanged
+          ? `${t('provider.baseUrl')}: ${baseUrlInput} -> ${resolvedBaseUrl}`
+          : `${t('provider.baseUrl')}: ${resolvedBaseUrl}`;
+        setModelFetchInfo({ kind: 'success', text: resolvedText });
       } else {
         setModels([]);
+        const message = data?.message || `Request failed: ${res.status}`;
+        setModelFetchInfo({ kind: 'error', text: message });
       }
     } finally {
       setFetchingModels(false);
@@ -383,7 +412,10 @@ export default function Home() {
                     <input
                       className="glass-input w-full rounded-xl px-4 py-3"
                       value={baseUrl}
-                      onChange={(e) => setBaseUrl(e.target.value)}
+                      onChange={(e) => {
+                        setBaseUrl(e.target.value);
+                        setModelFetchInfo(null);
+                      }}
                       placeholder="https://api.example.com"
                     />
                   </label>
@@ -432,6 +464,11 @@ export default function Home() {
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       </div>}
                     </div>
+                    {modelFetchInfo && (
+                      <div className={`mt-2 text-[11px] break-all ${modelFetchInfo.kind === 'success' ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {modelFetchInfo.text}
+                      </div>
+                    )}
                   </label>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -597,9 +634,13 @@ export default function Home() {
                                   ? 'text-zinc-500 dark:text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
                                   : r.status === 'invalid'
                                     ? 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20'
-                                    : r.status === 'rate_limited'
-                                      ? 'text-amber-600 dark:text-amber-300 bg-amber-500/10 border-amber-500/20'
-                                      : 'text-zinc-400 bg-zinc-500/10';
+                            : r.status === 'rate_limited'
+                              ? 'text-amber-600 dark:text-amber-300 bg-amber-500/10 border-amber-500/20'
+                              : 'text-zinc-400 bg-zinc-500/10';
+
+                        const messageText = r.message ? (r.message.startsWith('error.') ? t(r.message) : r.message) : '';
+                        const rawText = formatRaw(r.raw);
+                        const displayText = rawText ? (messageText ? `${messageText} | ${rawText}` : rawText) : messageText;
 
                         return (
                           <div
@@ -620,7 +661,12 @@ export default function Home() {
                               <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium border ${statusClass}`}>{statusLabel}</span>
                             </div>
                             <div className="col-span-2 font-mono text-[var(--foreground)] text-right pr-4">{typeof r.balance === 'number' ? r.balance : '-'}</div>
-                            <div className="col-span-4 truncate text-[var(--muted-foreground)] transform transition-all duration-300 hover:text-[var(--foreground)] hover:whitespace-normal hover:bg-[var(--background)] hover:absolute hover:z-10 hover:p-2 hover:rounded-md hover:shadow-xl hover:left-1/2 hover:w-1/2" title={r.message ? (r.message.startsWith('error.') ? t(r.message) : r.message) : ''}>{r.message ? (r.message.startsWith('error.') ? t(r.message) : r.message) : ''}</div>
+                            <div
+                              className="col-span-4 truncate break-words text-[var(--muted-foreground)] transform transition-all duration-300 hover:text-[var(--foreground)] hover:bg-[var(--background)] hover:absolute hover:z-10 hover:p-2 hover:rounded-md hover:shadow-xl hover:left-1/2 hover:w-1/2 hover:overflow-visible hover:whitespace-pre-wrap"
+                              title={displayText || ''}
+                            >
+                              {displayText || '-'}
+                            </div>
                           </div>
                         );
                       })}

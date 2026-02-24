@@ -31,8 +31,14 @@ function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.replace(/\/+$/, '');
 }
 
-async function readErrorBody(res: Response) {
+function shouldTryV1Fallback(baseUrl: string, res: Response) {
+  if (normalizeBaseUrl(baseUrl).endsWith('/v1')) return false;
+  return res.status === 404 || res.status === 405;
+}
+
+async function readBody(res: Response) {
   const text = await res.text().catch(() => '');
+  if (!text) return null;
   try {
     return JSON.parse(text);
   } catch {
@@ -40,66 +46,136 @@ async function readErrorBody(res: Response) {
   }
 }
 
-function classifyHttp(res: Response) {
+function extractErrorInfo(raw: unknown): { message?: string; code?: string; type?: string } {
+  if (!raw) return {};
+  if (typeof raw === 'string') return { message: raw };
+  if (typeof raw !== 'object') return { message: String(raw) };
+
+  const obj: any = raw;
+  const err = obj?.error ?? obj?.err ?? (Array.isArray(obj?.errors) ? obj.errors[0] : undefined);
+
+  const message =
+    (typeof err?.message === 'string' && err.message) ||
+    (typeof obj?.message === 'string' && obj.message) ||
+    (typeof err === 'string' && err) ||
+    (typeof obj?.error === 'string' && obj.error) ||
+    (typeof obj?.error_message === 'string' && obj.error_message) ||
+    (typeof obj?.error_msg === 'string' && obj.error_msg);
+
+  const code =
+    (typeof err?.code === 'string' && err.code) ||
+    (typeof obj?.code === 'string' && obj.code) ||
+    (typeof obj?.error_code === 'string' && obj.error_code);
+
+  const type =
+    (typeof err?.type === 'string' && err.type) ||
+    (typeof obj?.type === 'string' && obj.type);
+
+  return { message, code, type };
+}
+
+function classifyError(res: Response, raw: unknown) {
   if (res.status === 401 || res.status === 403) return 'invalid' as const;
   if (res.status === 429) return 'rate_limited' as const;
+
+  const info = extractErrorInfo(raw);
+  const text = [info.message, info.code, info.type].filter(Boolean).join(' ').toLowerCase();
+  if (text.includes('rate limit') || text.includes('too many requests') || text.includes('quota')) return 'rate_limited' as const;
+  if (text.includes('invalid') || text.includes('unauthorized') || text.includes('authentication') || text.includes('api key') || text.includes('apikey')) {
+    return 'invalid' as const;
+  }
   return 'unknown_error' as const;
 }
 
-async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; key: string; prompt?: string }) {
-  const url = `${normalizeBaseUrl(req.baseUrl)}/chat/completions`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${req.key}`,
-    },
-    body: JSON.stringify({
-      model: req.model,
-      messages: [{ role: 'user', content: req.prompt || 'Hi' }],
-      max_tokens: 1,
-      stream: false,
-    }),
-  });
+function isErrorPayload(raw: unknown) {
+  if (!raw || typeof raw !== 'object') return false;
+  const obj: any = raw;
+  if (obj.error || obj.err) return true;
+  if (obj.object === 'error') return true;
+  if (obj.type === 'error') return true;
+  if (Array.isArray(obj.errors) && obj.errors.length > 0) return true;
+  return false;
+}
 
-  if (res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    return { ok: true as const, raw };
+function isOpenAIChatResponse(raw: unknown) {
+  if (!raw || typeof raw !== 'object') return false;
+  const obj: any = raw;
+  return Array.isArray(obj.choices) && obj.choices.length > 0;
+}
+
+function isAnthropicMessageResponse(raw: unknown) {
+  if (!raw || typeof raw !== 'object') return false;
+  const obj: any = raw;
+  if (obj.type === 'message') return true;
+  return Array.isArray(obj.content) && obj.content.length > 0;
+}
+
+async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; key: string; prompt?: string }) {
+  async function requestOnce(baseUrl: string) {
+    const url = `${normalizeBaseUrl(baseUrl)}/chat/completions`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${req.key}`,
+      },
+      body: JSON.stringify({
+        model: req.model,
+        messages: [{ role: 'user', content: req.prompt || 'Hi' }],
+        max_tokens: 1,
+        stream: false,
+      }),
+    });
+    const raw = await readBody(res);
+    return { res, raw };
   }
 
-  return {
-    ok: false as const,
-    status: classifyHttp(res),
-    raw: await readErrorBody(res),
-  };
+  const primary = await requestOnce(req.baseUrl);
+  const primaryOk = primary.res.ok && isOpenAIChatResponse(primary.raw) && !isErrorPayload(primary.raw);
+  if (primaryOk) return { ok: true as const, raw: primary.raw };
+
+  if (shouldTryV1Fallback(req.baseUrl, primary.res)) {
+    const fallback = await requestOnce(`${normalizeBaseUrl(req.baseUrl)}/v1`);
+    const fallbackOk = fallback.res.ok && isOpenAIChatResponse(fallback.raw) && !isErrorPayload(fallback.raw);
+    if (fallbackOk) return { ok: true as const, raw: fallback.raw };
+    return { ok: false as const, status: classifyError(fallback.res, fallback.raw), raw: fallback.raw };
+  }
+
+  return { ok: false as const, status: classifyError(primary.res, primary.raw), raw: primary.raw };
 }
 
 async function checkAnthropicKey(req: { baseUrl: string; model: string; key: string; prompt?: string }) {
-  const url = `${normalizeBaseUrl(req.baseUrl)}/messages`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
-      'x-api-key': req.key,
-    },
-    body: JSON.stringify({
-      model: req.model,
-      max_tokens: 1,
-      messages: [{ role: 'user', content: req.prompt || 'Hi' }],
-    }),
-  });
-
-  if (res.ok) {
-    const raw = await res.json().catch(() => ({}));
-    return { ok: true as const, raw };
+  async function requestOnce(baseUrl: string) {
+    const url = `${normalizeBaseUrl(baseUrl)}/messages`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': req.key,
+      },
+      body: JSON.stringify({
+        model: req.model,
+        max_tokens: 1,
+        messages: [{ role: 'user', content: req.prompt || 'Hi' }],
+      }),
+    });
+    const raw = await readBody(res);
+    return { res, raw };
   }
 
-  return {
-    ok: false as const,
-    status: classifyHttp(res),
-    raw: await readErrorBody(res),
-  };
+  const primary = await requestOnce(req.baseUrl);
+  const primaryOk = primary.res.ok && isAnthropicMessageResponse(primary.raw) && !isErrorPayload(primary.raw);
+  if (primaryOk) return { ok: true as const, raw: primary.raw };
+
+  if (shouldTryV1Fallback(req.baseUrl, primary.res)) {
+    const fallback = await requestOnce(`${normalizeBaseUrl(req.baseUrl)}/v1`);
+    const fallbackOk = fallback.res.ok && isAnthropicMessageResponse(fallback.raw) && !isErrorPayload(fallback.raw);
+    if (fallbackOk) return { ok: true as const, raw: fallback.raw };
+    return { ok: false as const, status: classifyError(fallback.res, fallback.raw), raw: fallback.raw };
+  }
+
+  return { ok: false as const, status: classifyError(primary.res, primary.raw), raw: primary.raw };
 }
 
 async function checkBalance(provider: ProviderId, baseUrl: string, key: string): Promise<number> {
@@ -180,11 +256,14 @@ export async function checkOne(input: {
     return { key: input.key, ok: true, status: 'valid', balance, raw: result.raw };
   }
 
+  const errorInfo = extractErrorInfo(result.raw);
+  const fallbackMessage = result.status === 'invalid' ? 'error.invalid' : result.status === 'rate_limited' ? 'error.rateLimited' : 'error.failed';
+
   return {
     key: input.key,
     ok: false,
     status: result.status,
-    message: result.status === 'invalid' ? 'error.invalid' : result.status === 'rate_limited' ? 'error.rateLimited' : 'error.failed',
+    message: errorInfo.message || errorInfo.code || fallbackMessage,
     raw: result.raw,
   };
 }

@@ -13,7 +13,28 @@ function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.replace(/\/+$/, '');
 }
 
-async function tryOpenAIModels(baseUrl: string, key: string): Promise<string[] | null> {
+function buildCandidateBaseUrls(baseUrl: string) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  const out = [normalized];
+  if (normalized.endsWith('/v1')) {
+    out.push(normalized.replace(/\/v1$/, ''));
+  } else {
+    out.push(`${normalized}/v1`);
+  }
+  return Array.from(new Set(out.filter(Boolean)));
+}
+
+async function readBody(res: Response) {
+  const text = await res.text().catch(() => '');
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function tryOpenAIModels(baseUrl: string, key: string): Promise<{ models: string[] | null; status: number; raw: unknown }> {
   const url = `${normalizeBaseUrl(baseUrl)}/models`;
   const res = await fetch(url, {
     method: 'GET',
@@ -22,15 +43,16 @@ async function tryOpenAIModels(baseUrl: string, key: string): Promise<string[] |
       Accept: 'application/json'
     }
   });
-  if (!res.ok) return null;
-  const d: any = await res.json().catch(() => null);
+  const raw = await readBody(res);
+  if (!res.ok) return { models: null, status: res.status, raw };
+  const d: any = raw;
   const list = d?.data;
-  if (!Array.isArray(list)) return null;
+  if (!Array.isArray(list)) return { models: null, status: res.status, raw };
   const ids = list.map((m: any) => m?.id).filter(Boolean);
-  return Array.from(new Set(ids));
+  return { models: Array.from(new Set(ids)), status: res.status, raw };
 }
 
-async function tryAnthropicModels(baseUrl: string, key: string): Promise<string[] | null> {
+async function tryAnthropicModels(baseUrl: string, key: string): Promise<{ models: string[] | null; status: number; raw: unknown }> {
   // Anthropic has an API endpoint /v1/models (may require newer versions/permissions).
   const url = `${normalizeBaseUrl(baseUrl)}/models`;
   const res = await fetch(url, {
@@ -41,12 +63,13 @@ async function tryAnthropicModels(baseUrl: string, key: string): Promise<string[
       Accept: 'application/json'
     }
   });
-  if (!res.ok) return null;
-  const d: any = await res.json().catch(() => null);
+  const raw = await readBody(res);
+  if (!res.ok) return { models: null, status: res.status, raw };
+  const d: any = raw;
   const list = d?.data;
-  if (!Array.isArray(list)) return null;
+  if (!Array.isArray(list)) return { models: null, status: res.status, raw };
   const ids = list.map((m: any) => m?.id).filter(Boolean);
-  return Array.from(new Set(ids));
+  return { models: Array.from(new Set(ids)), status: res.status, raw };
 }
 
 function isLikelyOpenAICompatible(provider: ProviderId) {
@@ -57,27 +80,30 @@ function isLikelyOpenAICompatible(provider: ProviderId) {
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as Body;
   const keys = Array.isArray(body.keys) ? body.keys : [];
+  const candidates = buildCandidateBaseUrls(body.baseUrl);
 
-  const out: { ok: boolean; models?: string[]; tried: number; message?: string } = {
+  const out: { ok: boolean; models?: string[]; tried: number; message?: string; baseUrl?: string } = {
     ok: false,
     tried: 0
   };
 
   for (const k of keys) {
     if (!k) continue;
-    out.tried++;
+    for (const baseUrl of candidates) {
+      out.tried++;
+      const result = isLikelyOpenAICompatible(body.provider)
+        ? await tryOpenAIModels(baseUrl, k)
+        : await tryAnthropicModels(baseUrl, k);
 
-    const models = isLikelyOpenAICompatible(body.provider)
-      ? await tryOpenAIModels(body.baseUrl, k)
-      : await tryAnthropicModels(body.baseUrl, k);
-
-    if (models && models.length) {
-      out.ok = true;
-      out.models = models;
-      return Response.json(out);
+      if (result.models && result.models.length) {
+        out.ok = true;
+        out.models = result.models;
+        out.baseUrl = baseUrl;
+        return Response.json(out);
+      }
     }
   }
 
-  out.message = 'Unable to fetch models with provided keys.';
+  out.message = `Unable to fetch models with provided keys. Tried: ${candidates.join(', ')}`;
   return Response.json(out, { status: 400 });
 }
