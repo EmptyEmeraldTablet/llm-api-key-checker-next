@@ -6,7 +6,7 @@
 
 **批量验证多个 LLM 提供商的 API 密钥，实时流式进度显示**
 
-[在线演示](https://check.chat-tempmail.com) | [English Documentation](./README.md)
+[在线演示](https://llm-api-key-checker-next.vercel.app/zh-cn) | [English Documentation](./README.md)
 
 </div>
 
@@ -48,7 +48,7 @@
 
 1. 克隆仓库：
 ```bash
-git clone https://github.com/Selenium39/llm-api-key-checker-next.git
+git clone https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next.git
 cd llm-api-key-checker-next
 ```
 
@@ -241,15 +241,11 @@ pnpm start
 
 点击下方按钮一键部署到 Vercel：
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Selenium39/llm-api-key-checker-next)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next)
 
 ## 📄 许可证
 
 本项目采用 [MIT 许可证](LICENSE) 开源。
-
-## 💖 赞助商
-
-本项目由 [ChatTempMail](https://chat-tempmail.com) 赞助 - 一个免费的临时邮箱服务，集成 AI 功能。
 
 ## 🙏 致谢
 
@@ -279,15 +275,15 @@ pnpm start
 
 ## 📧 联系方式
 
-- GitHub: [@Selenium39](https://github.com/Selenium39)
-- 项目地址: [https://github.com/Selenium39/llm-api-key-checker-next](https://github.com/Selenium39/llm-api-key-checker-next)
-- 在线演示: [https://check.chat-tempmail.com](https://check.chat-tempmail.com)
+- GitHub: [@EmptyEmeraldTablet](https://github.com/EmptyEmeraldTablet)
+- 项目地址: [https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next](https://github.com/EmptyEmeraldTablet/llm-api-key-checker-next)
+- 在线演示: [https://llm-api-key-checker-next.vercel.app/zh-cn](https://llm-api-key-checker-next.vercel.app/zh-cn)
 
 ## 🌟 Star History
 
 如果这个项目对您有帮助，请给我们一个 ⭐️！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Selenium39/llm-api-key-checker-next&type=Date)](https://star-history.com/#Selenium39/llm-api-key-checker-next&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=EmptyEmeraldTablet/llm-api-key-checker-next&type=Date)](https://star-history.com/#EmptyEmeraldTablet/llm-api-key-checker-next&Date)
 
 ---
 
