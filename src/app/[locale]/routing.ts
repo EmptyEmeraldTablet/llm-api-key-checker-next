@@ -1,6 +1,6 @@
-import { locales } from '../../i18n/request';
+import { LOCALE_CODES } from '@/lib/locales';
 
 export const routing = {
-  locales,
+  locales: LOCALE_CODES,
   defaultLocale: 'en' as const
 };

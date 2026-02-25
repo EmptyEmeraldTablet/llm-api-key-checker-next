@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
 import { routing } from './routing';
+import { DEFAULT_LOCALE, isValidLocale } from '@/lib/locales';
 import '../globals.css';
 
 const baseUrl = 'https://check.chat-tempmail.com';
@@ -12,7 +12,8 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  const messages = (await getMessages({ locale })) as {
+  const safeLocale = isValidLocale(locale) ? locale : DEFAULT_LOCALE;
+  const messages = (await import(`../../../messages/${safeLocale}.json`)).default as {
     app: { title: string; subtitle: string };
     seo: { keywords: string };
   };
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     metadataBase: new URL(baseUrl),
     alternates: {
-      canonical: `/${locale}`,
+      canonical: `/${safeLocale}`,
       languages: {
         en: '/en',
         'zh-CN': '/zh-cn',
@@ -35,9 +36,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `${baseUrl}/${locale}`,
+      url: `${baseUrl}/${safeLocale}`,
       siteName: 'LLM API Key Checker',
-      locale: locale === 'zh-cn' ? 'zh_CN' : 'en_US',
+      locale: safeLocale === 'zh-cn' ? 'zh_CN' : 'en_US',
       type: 'website',
       images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     },
@@ -64,12 +65,15 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const messages = await getMessages();
+  const safeLocale = isValidLocale(locale) ? locale : DEFAULT_LOCALE;
+  const messages = (await import(`../../../messages/${safeLocale}.json`)).default;
 
   return (
-    <html lang={locale}>
+    <html lang={safeLocale}>
       <body>
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider locale={safeLocale} messages={messages}>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTranslations } from 'next-intl';
 import { PROVIDERS, ProviderId, getProviderMeta } from '@/lib/providers';
-import { parseKeys, CheckResult } from '@/lib/checkers';
+import { parseKeys, CheckResult, checkOne } from '@/lib/checkers';
 import { LOCALES } from '@/lib/locales';
 
 const siteUrl = 'https://check.chat-tempmail.com';
@@ -12,6 +12,12 @@ const siteUrl = 'https://check.chat-tempmail.com';
 type Row = CheckResult;
 
 type ModelFetchInfo = { kind: 'success' | 'error'; text: string };
+
+type ModelFetchResult = {
+  models: string[] | null;
+  status: number;
+  raw: unknown;
+};
 
 function formatRaw(raw: unknown) {
   if (raw == null) return '';
@@ -21,6 +27,98 @@ function formatRaw(raw: unknown) {
   } catch {
     return String(raw);
   }
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function normalizeBaseUrl(baseUrl: string) {
+  return baseUrl.replace(/\/+$/, '');
+}
+
+function buildCandidateBaseUrls(baseUrl: string) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  const out = [normalized];
+  if (normalized.endsWith('/v1')) {
+    out.push(normalized.replace(/\/v1$/, ''));
+  } else {
+    out.push(`${normalized}/v1`);
+  }
+  return Array.from(new Set(out.filter(Boolean)));
+}
+
+async function readBody(res: Response) {
+  const text = await res.text().catch(() => '');
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function tryOpenAIModels(baseUrl: string, key: string): Promise<ModelFetchResult> {
+  const url = `${normalizeBaseUrl(baseUrl)}/models`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      Accept: 'application/json',
+    },
+  });
+  const raw = await readBody(res);
+  if (!res.ok) return { models: null, status: res.status, raw };
+  const d: any = raw;
+  const list = d?.data;
+  if (!Array.isArray(list)) return { models: null, status: res.status, raw };
+  const ids = list.map((m: any) => m?.id).filter(Boolean);
+  return { models: Array.from(new Set(ids)), status: res.status, raw };
+}
+
+async function tryAnthropicModels(baseUrl: string, key: string): Promise<ModelFetchResult> {
+  const url = `${normalizeBaseUrl(baseUrl)}/models`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      Accept: 'application/json',
+    },
+  });
+  const raw = await readBody(res);
+  if (!res.ok) return { models: null, status: res.status, raw };
+  const d: any = raw;
+  const list = d?.data;
+  if (!Array.isArray(list)) return { models: null, status: res.status, raw };
+  const ids = list.map((m: any) => m?.id).filter(Boolean);
+  return { models: Array.from(new Set(ids)), status: res.status, raw };
+}
+
+function isLikelyOpenAICompatible(provider: ProviderId) {
+  return provider !== 'anthropic';
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  signal: AbortSignal,
+  fn: (t: T) => Promise<void>
+) {
+  let idx = 0;
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      if (signal.aborted) return;
+      const i = idx++;
+      if (i >= items.length) return;
+      try {
+        await fn(items[i]);
+      } catch {
+        if (signal.aborted) return;
+      }
+    }
+  });
+  await Promise.all(workers);
 }
 
 function ThemeSwitcher() {
@@ -194,6 +292,7 @@ export default function Home() {
   const [rows, setRows] = useState<Row[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
+  const runIdRef = useRef(0);
 
   function onProviderChange(id: ProviderId) {
     setProvider(id);
@@ -215,67 +314,63 @@ export default function Home() {
 
     if (keys.length === 0) return;
 
+    const runId = runIdRef.current + 1;
+    runIdRef.current = runId;
     setRunning(true);
     const ac = new AbortController();
     abortRef.current = ac;
 
+    const concurrencyValue = clamp(Number(concurrency || 10), 1, 50);
+    let doneCount = 0;
+
+    const pushResult = (result: Row) => {
+      if (ac.signal.aborted || runIdRef.current !== runId) return;
+      doneCount += 1;
+      setDone(doneCount);
+      setRows((prev) => [result, ...prev]);
+    };
+
     try {
-      const res = await fetch('/api/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider,
-          baseUrl,
-          model,
-          keys,
-          concurrency,
-          validationPrompt: prompt,
-          endpointSuffix,
-          lowThreshold
-        }),
-        signal: ac.signal
-      });
-
-      if (!res.ok || !res.body) {
-        throw new Error(`Request failed: ${res.status}`);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        let idx;
-        while ((idx = buf.indexOf('\n')) >= 0) {
-          const line = buf.slice(0, idx).trim();
-          buf = buf.slice(idx + 1);
-          if (!line) continue;
-          const evt = JSON.parse(line);
-          if (evt.type === 'meta') {
-            setTotal(evt.total);
-          } else if (evt.type === 'result') {
-            setDone(evt.done);
-            setRows((prev) => [evt.result as Row, ...prev]);
-          } else if (evt.type === 'done') {
-            setDone(evt.done);
-          }
+      await runWithConcurrency(keys, concurrencyValue, ac.signal, async (k) => {
+        if (ac.signal.aborted || runIdRef.current !== runId) return;
+        try {
+          const result = await checkOne({
+            provider,
+            baseUrl,
+            model,
+            key: k,
+            prompt,
+            lowThreshold,
+            endpointSuffix,
+            signal: ac.signal,
+          });
+          pushResult(result);
+        } catch (err: any) {
+          if (ac.signal.aborted || runIdRef.current !== runId) return;
+          if (err?.name === 'AbortError') return;
+          const message = err?.message || 'error.failed';
+          pushResult({
+            key: k,
+            ok: false,
+            status: 'unknown_error',
+            message,
+            raw: err,
+          });
         }
-      }
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') {
-        console.error(e);
-      }
+      });
     } finally {
-      setRunning(false);
-      abortRef.current = null;
+      if (runIdRef.current === runId) {
+        setRunning(false);
+        abortRef.current = null;
+      }
     }
   }
 
   function stop() {
     abortRef.current?.abort();
+    abortRef.current = null;
+    runIdRef.current += 1;
+    setRunning(false);
   }
 
   async function fetchModels() {
@@ -285,31 +380,35 @@ export default function Home() {
     setModelFetchInfo(null);
     const baseUrlInput = baseUrl;
     try {
-      const res = await fetch('/api/models', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, baseUrl, keys })
-      });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data?.models) {
-        setModels(data.models);
-        if (data.models.length && !data.models.includes(model)) {
-          setModel(data.models[0]);
+      const candidates = buildCandidateBaseUrls(baseUrlInput);
+      for (const k of keys) {
+        for (const candidate of candidates) {
+          const result = isLikelyOpenAICompatible(provider)
+            ? await tryOpenAIModels(candidate, k)
+            : await tryAnthropicModels(candidate, k);
+          if (result.models && result.models.length) {
+            setModels(result.models);
+            if (result.models.length && !result.models.includes(model)) {
+              setModel(result.models[0]);
+            }
+            const baseUrlChanged = candidate !== baseUrlInput;
+            if (baseUrlChanged) {
+              setBaseUrl(candidate);
+            }
+            const resolvedText = baseUrlChanged
+              ? `${t('provider.baseUrl')}: ${baseUrlInput} -> ${candidate}`
+              : `${t('provider.baseUrl')}: ${candidate}`;
+            setModelFetchInfo({ kind: 'success', text: resolvedText });
+            return;
+          }
         }
-        const resolvedBaseUrl = data.baseUrl || baseUrlInput;
-        const baseUrlChanged = data.baseUrl && data.baseUrl !== baseUrlInput;
-        if (baseUrlChanged) {
-          setBaseUrl(data.baseUrl);
-        }
-        const resolvedText = baseUrlChanged
-          ? `${t('provider.baseUrl')}: ${baseUrlInput} -> ${resolvedBaseUrl}`
-          : `${t('provider.baseUrl')}: ${resolvedBaseUrl}`;
-        setModelFetchInfo({ kind: 'success', text: resolvedText });
-      } else {
-        setModels([]);
-        const message = data?.message || `Request failed: ${res.status}`;
-        setModelFetchInfo({ kind: 'error', text: message });
       }
+      setModels([]);
+      setModelFetchInfo({ kind: 'error', text: `Unable to fetch models with provided keys. Tried: ${candidates.join(', ')}` });
+    } catch (err: any) {
+      setModels([]);
+      const message = err?.message ? `Request failed: ${err.message}` : 'Request failed';
+      setModelFetchInfo({ kind: 'error', text: message });
     } finally {
       setFetchingModels(false);
     }

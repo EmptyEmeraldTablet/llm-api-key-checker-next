@@ -10,6 +10,7 @@ export type CheckRequest = {
   endpointSuffix?: string;
   lowThreshold?: number; // for status classification
   enableStream?: boolean;
+  signal?: AbortSignal;
 };
 
 export type CheckResult = {
@@ -177,7 +178,14 @@ function isOpenAIResponseOk(raw: unknown, kind: OpenAIEndpointKind) {
   return raw != null;
 }
 
-async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; key: string; prompt?: string; endpointSuffix?: string }) {
+async function checkOpenAICompatibleKey(req: {
+  baseUrl: string;
+  model: string;
+  key: string;
+  prompt?: string;
+  endpointSuffix?: string;
+  signal?: AbortSignal;
+}) {
   const endpointPath = resolveEndpointPath('openai', req.endpointSuffix);
   const endpointKind = getOpenAIEndpointKind(endpointPath);
 
@@ -190,6 +198,7 @@ async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; k
         Authorization: `Bearer ${req.key}`,
       },
       body: JSON.stringify(buildOpenAIRequestBody(endpointKind, req)),
+      signal: req.signal,
     });
     const raw = await readBody(res);
     return { res, raw };
@@ -209,7 +218,14 @@ async function checkOpenAICompatibleKey(req: { baseUrl: string; model: string; k
   return { ok: false as const, status: classifyError(primary.res, primary.raw), raw: primary.raw };
 }
 
-async function checkAnthropicKey(req: { baseUrl: string; model: string; key: string; prompt?: string; endpointSuffix?: string }) {
+async function checkAnthropicKey(req: {
+  baseUrl: string;
+  model: string;
+  key: string;
+  prompt?: string;
+  endpointSuffix?: string;
+  signal?: AbortSignal;
+}) {
   const endpointPath = resolveEndpointPath('anthropic', req.endpointSuffix);
 
   async function requestOnce(baseUrl: string) {
@@ -226,6 +242,7 @@ async function checkAnthropicKey(req: { baseUrl: string; model: string; key: str
         max_tokens: 1,
         messages: [{ role: 'user', content: req.prompt || 'Hi' }],
       }),
+      signal: req.signal,
     });
     const raw = await readBody(res);
     return { res, raw };
@@ -245,11 +262,11 @@ async function checkAnthropicKey(req: { baseUrl: string; model: string; key: str
   return { ok: false as const, status: classifyError(primary.res, primary.raw), raw: primary.raw };
 }
 
-async function checkBalance(provider: ProviderId, baseUrl: string, key: string): Promise<number> {
+async function checkBalance(provider: ProviderId, baseUrl: string, key: string, signal?: AbortSignal): Promise<number> {
   // Best-effort, only for providers where this is known to work.
   if (provider === 'deepseek') {
     const url = `${normalizeBaseUrl(baseUrl).replace(/\/v1$/, '')}/user/balance`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' } });
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' }, signal });
     if (!res.ok) return -1;
     const d: any = await res.json().catch(() => null);
     const info = d?.balance_infos?.find((b: any) => b.currency === 'USD') || d?.balance_infos?.[0];
@@ -260,7 +277,7 @@ async function checkBalance(provider: ProviderId, baseUrl: string, key: string):
 
   if (provider === 'moonshot') {
     const url = `${normalizeBaseUrl(baseUrl)}/users/me/balance`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` } });
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` }, signal });
     if (!res.ok) return -1;
     const d: any = await res.json().catch(() => null);
     const n = Number(d?.data?.available_balance);
@@ -269,7 +286,7 @@ async function checkBalance(provider: ProviderId, baseUrl: string, key: string):
 
   if (provider === 'newapi') {
     const url = `${normalizeBaseUrl(baseUrl).replace(/\/v1$/, '')}/api/usage/token`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` } });
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` }, signal });
     if (!res.ok) return -1;
     const d: any = await res.json().catch(() => null);
     if (d?.code === true && d?.data) {
@@ -291,6 +308,7 @@ export async function checkOne(input: {
   prompt?: string;
   endpointSuffix?: string;
   lowThreshold?: number;
+  signal?: AbortSignal;
 }): Promise<CheckResult> {
   const meta = getProviderMeta(input.provider);
 
@@ -305,6 +323,7 @@ export async function checkOne(input: {
       key: input.key,
       prompt: input.prompt,
       endpointSuffix: input.endpointSuffix,
+      signal: input.signal,
     });
   } else {
     result = await checkOpenAICompatibleKey({
@@ -313,11 +332,12 @@ export async function checkOne(input: {
       key: input.key,
       prompt: input.prompt,
       endpointSuffix: input.endpointSuffix,
+      signal: input.signal,
     });
   }
 
   if (result.ok) {
-    const balance = meta.supportsBalance ? await checkBalance(input.provider, input.baseUrl, input.key) : undefined;
+    const balance = meta.supportsBalance ? await checkBalance(input.provider, input.baseUrl, input.key, input.signal) : undefined;
 
     // Balance-based classification (only when balance is available)
     if (typeof balance === 'number') {
